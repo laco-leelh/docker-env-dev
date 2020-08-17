@@ -1,0 +1,84 @@
+version: '3'
+
+services:
+  mysql57:
+    container_name: "mysql57"
+    hostname: "mysql57"
+    image: "mysql:5.7"
+    environment:
+      - TZ=Asia/Shanghai
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_USER=root
+      - MYSQL_PASS=root
+    volumes:
+      - ../workspace:/data0/www
+      # - ./mysql57/data:/var/lib/mysql
+      - ./mysql57/conf/my.cnf:/etc/my.cnf
+    restart: always
+    ports:
+      - "3306:3306"
+
+  redis:
+    container_name: "redis"
+    hostname: redis
+    image: "redis:6.0-rc2"
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - ../workspace:/data0/www
+      - ./redis60rc2/conf:/etc/redis:rw
+      # - ./redis60rc2/redis-data:/data:rw
+    restart: always
+    ports:
+      - "6379:6379"
+
+  mongodb:
+    container_name: "mongodb"
+    hostname: "mongodb"
+    image: "mongo:latest"
+    environment:
+      - TZ=Asia/Shanghai
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=root
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - ../workspace:/data0/www
+
+  php72:
+    # /usr/local/etc/php
+    container_name: "php72"
+    hostname: "php72"
+    image: "registry.cn-hangzhou.aliyuncs.com/dev_laco/env_dev:1.0"
+    volumes:
+      - ../workspace:/data0/www
+    environment:
+      - TZ=Asia/Shanghai
+      - APP_ENV=development
+    ports:
+      - "8000:8000"
+      - "9966:9966"
+    links:
+      - mysql57:mysql
+      - redis:redis
+    stdin_open: true
+    tty: true
+
+  nginx:
+    container_name: "devnginx"
+    hostname: "nginx"
+    image: registry.cn-shenzhen.aliyuncs.com/influx_carp/nginx
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - ../workspace:/data0/www
+      - ./nginx/conf.d:/etc/nginx/conf.d:rw
+      - ./nginx/logs:/var/log/nginx:rw
+    ports:
+      - "80:80"
+      - "9000:9000"
+    links:
+      - php72:php72
+      - mysql57:mysql
+      - redis:redis

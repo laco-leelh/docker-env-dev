@@ -1,10 +1,11 @@
 # FROM php:7.2.6-fpm
 FROM php:7.2
 
-MAINTAINER laco
+MAINTAINER Laco
 
 # Env
 ENV SWOOLE_VERSION=4.5.1
+ENV XLSWRITER_VERSION=1.3.6
 
 # Setting env
 RUN mkdir -p /usr/local/ext/php/conf.d
@@ -39,6 +40,8 @@ COPY ./ext/redis.tgz /ext/redis.tgz
 COPY ./ext/mongodb.tgz /ext/mongodb.tgz
 # mcrypt 1.0.1
 COPY ./ext/mcrypt.tgz /ext/mcrypt.tgz
+# xlswriter
+COPY ./ext/xlswriter.tgz /ext/xlswriter.tgz
 
 # 性能分析
 COPY ./ext/swoole_loader.so /usr/local/lib/php/extensions/no-debug-non-zts-20170718/swoole_loader.so
@@ -54,15 +57,25 @@ RUN docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-di
 		sockets \
 		opcache
 
-	# ---- imap begin ----
-RUN pecl install xlswriter
+# ---- imap邮件 begin ----
 RUN docker-php-ext-configure imap --with-kerberos --with-imap-ssl && docker-php-ext-install imap
-	# ---- imap end ----
+# ---- imap邮件 end ----
+
+# ---- xlswriter excel begin ----
+RUN tar -zxvf /ext/xlswriter.tgz \
+	&& ( \
+		cd xlswriter-$XLSWRITER_VERSION} \
+		&& phpize \
+		&& ./configure --enable-reader \
+		make && make install \
+	)
+# ---- xlswriter excel end ----
 
 RUN pecl install /ext/redis.tgz && echo "extension=redis.so" > /usr/local/ext/php/conf.d/redis.ini
 RUN pecl install /ext/mongodb.tgz && echo "extension=mongodb.so" > /usr/local/ext/php/conf.d/mongodb.ini
 RUN pecl install /ext/mcrypt.tgz && echo "extension=mcrypt.so" > /usr/local/ext/php/conf.d/mcrypt.ini
 RUN echo "extension=swoole_loader.so" > /usr/local/ext/php/conf.d/swoole_loader.ini
+RUN echo "extension=xlswriter.so" > /usr/local/ext/php/conf.d/xlswriter.ini
 
 # PHP config
 ADD ./php.ini		/usr/local/etc/php/php.ini
